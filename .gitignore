@@ -4,3 +4,15 @@ __pycache__/
 data/raw/
 runs/
 *.pt
+
+# Local datasets and backups
+data/
+backups/
+
+# Local database files
+database/*.db
+
+# Generated experiments and training outputs
+experiments/
+
+# Previous dependency snapshot
