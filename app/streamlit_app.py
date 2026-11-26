@@ -11,18 +11,29 @@ import joblib
 
 
 # ============================================================
-# 1. PROJECT ROOT AND PYTHON IMPORT PATH
+# 1. STREAMLIT PAGE CONFIGURATION
+# Must be the first Streamlit command in this file.
+# ============================================================
+
+st.set_page_config(
+    page_title="Road Damage Detection System",
+    page_icon="🛣️",
+    layout="wide",
+)
+
+
+# ============================================================
+# 2. PROJECT ROOT AND PYTHON IMPORT PATH
 # ============================================================
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
-# Fix database module import when running through Streamlit
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 
 # ============================================================
-# 2. DATABASE IMPORTS
+# 3. DATABASE IMPORTS
 # ============================================================
 
 try:
@@ -43,20 +54,20 @@ except ImportError as error:
 
 
 # ============================================================
-# 3. MODEL PATHS AND CONFIGURATION
+# 4. MODEL PATHS AND CONFIGURATION
 # ============================================================
 
+# Final trained YOLO26s model
 YOLO_MODEL_PATH = (
     ROOT_DIR
-    / "runs"
-    / "detect"
     / "experiments"
     / "yolo_final"
-    / "yolo26n_rtx4070_corrected_balanced600"
+    / "yolo26s_640_final"
     / "weights"
     / "best.pt"
 )
 
+# Random Forest maintenance-priority model
 RF_MODEL_PATH = (
     ROOT_DIR
     / "experiments"
@@ -64,8 +75,10 @@ RF_MODEL_PATH = (
     / "random_forest_priority.joblib"
 )
 
+# Detection confidence threshold
 CONFIDENCE_THRESHOLD = 0.25
 
+# Project class IDs and class names
 CLASS_NAMES = {
     0: "longitudinal crack",
     1: "transverse crack",
@@ -73,6 +86,7 @@ CLASS_NAMES = {
     3: "pothole",
 }
 
+# These feature names must match the Random Forest training features.
 FEATURE_COLUMNS = [
     "total_detections",
     "longitudinal crack_count",
@@ -87,7 +101,7 @@ FEATURE_COLUMNS = [
 
 
 # ============================================================
-# 4. INITIALIZE DATABASE
+# 5. INITIALIZE DATABASE
 # ============================================================
 
 try:
@@ -95,18 +109,13 @@ try:
 
 except Exception as error:
     st.error(f"Database initialization failed: {error}")
+    st.exception(error)
     st.stop()
 
 
 # ============================================================
-# 5. STREAMLIT PAGE CONFIGURATION
+# 6. PAGE HEADER
 # ============================================================
-
-st.set_page_config(
-    page_title="Road Damage Detection System",
-    page_icon="🛣️",
-    layout="wide",
-)
 
 st.title(
     "🛣️ Road Damage Detection and "
@@ -119,7 +128,7 @@ st.markdown(
     and estimate its visual maintenance priority.
 
     **Integrated technologies:**
-    - YOLO for road damage detection
+    - YOLO26s for road damage detection
     - Random Forest for priority classification
     - SQLite for prediction history
     """
@@ -133,11 +142,17 @@ st.info(
 
 
 # ============================================================
-# 6. LOAD TRAINED MODELS
+# 7. LOAD TRAINED MODELS
 # ============================================================
 
 @st.cache_resource
 def load_models():
+    """
+    Load the YOLO and Random Forest models once.
+
+    Streamlit reruns the script after user interactions.
+    st.cache_resource prevents reloading the models each time.
+    """
 
     yolo_model = YOLO(str(YOLO_MODEL_PATH))
 
@@ -146,48 +161,57 @@ def load_models():
     return yolo_model, rf_model
 
 
-if not YOLO_MODEL_PATH.exists():
+# Check that model files exist before loading.
 
+if not YOLO_MODEL_PATH.exists():
     st.error(
-        f"YOLO model file not found:\n{YOLO_MODEL_PATH}"
+        "YOLO model file was not found:\n\n"
+        f"{YOLO_MODEL_PATH}"
     )
     st.stop()
 
-
 if not RF_MODEL_PATH.exists():
-
     st.error(
-        f"Random Forest model file not found:\n{RF_MODEL_PATH}"
+        "Random Forest model file was not found:\n\n"
+        f"{RF_MODEL_PATH}"
     )
     st.stop()
 
 
 try:
-
     yolo_model, rf_model = load_models()
 
     st.success(
-        "YOLO and Random Forest models loaded successfully."
+        "YOLO26s and Random Forest models loaded successfully."
     )
 
 except Exception as error:
-
     st.error("Model loading failed.")
     st.exception(error)
     st.stop()
 
 
 # ============================================================
-# 7. FEATURE EXTRACTION FUNCTION
+# 8. FEATURE EXTRACTION FUNCTION
 # ============================================================
 
 def extract_features(result):
+    """
+    Extract detection counts and mean confidence values
+    from the YOLO prediction.
 
+    Returns:
+        feature_df: DataFrame with the expected RF features
+        counts: Dictionary containing detections per class
+    """
+
+    # Initialize class counts
     counts = {
         class_name: 0
         for class_name in CLASS_NAMES.values()
     }
 
+    # Initialize confidence sums
     confidence_sums = {
         class_name: 0.0
         for class_name in CLASS_NAMES.values()
@@ -195,6 +219,7 @@ def extract_features(result):
 
     detections = result.boxes
 
+    # Process detections if YOLO found any boxes
     if detections is not None and len(detections) > 0:
 
         class_ids = (
@@ -207,7 +232,7 @@ def extract_features(result):
 
         for class_id, confidence in zip(
             class_ids,
-            confidences
+            confidences,
         ):
 
             class_name = CLASS_NAMES.get(class_id)
@@ -221,22 +246,21 @@ def extract_features(result):
                 confidence
             )
 
+    # Total number of detected objects
     features = {
         "total_detections": sum(counts.values())
     }
 
+    # Calculate per-class mean confidence
     for class_name in CLASS_NAMES.values():
 
         count = counts[class_name]
 
         if count > 0:
-
             mean_confidence = (
                 confidence_sums[class_name] / count
             )
-
         else:
-
             mean_confidence = 0.0
 
         features[
@@ -247,6 +271,7 @@ def extract_features(result):
             f"{class_name}_mean_confidence"
         ] = mean_confidence
 
+    # Arrange features in the exact expected column order
     feature_df = pd.DataFrame(
         [
             [
@@ -261,7 +286,7 @@ def extract_features(result):
 
 
 # ============================================================
-# 8. IMAGE UPLOAD SECTION
+# 9. IMAGE UPLOAD SECTION
 # ============================================================
 
 st.divider()
@@ -277,15 +302,18 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
 
-    try:
+    # --------------------------------------------------------
+    # Read uploaded image
+    # --------------------------------------------------------
 
+    try:
         image = Image.open(
             uploaded_file
         ).convert("RGB")
 
-    except Exception:
-
+    except Exception as error:
         st.error("Unable to read the uploaded image.")
+        st.exception(error)
         st.stop()
 
     st.subheader("Uploaded Road Image")
@@ -296,6 +324,10 @@ if uploaded_file is not None:
         use_container_width=True,
     )
 
+    # --------------------------------------------------------
+    # Analyze button
+    # --------------------------------------------------------
+
     analyze_button = st.button(
         "Analyze Road Damage",
         type="primary",
@@ -303,7 +335,7 @@ if uploaded_file is not None:
     )
 
     # ========================================================
-    # 9. ANALYZE IMAGE
+    # 10. ANALYZE IMAGE
     # ========================================================
 
     if analyze_button:
@@ -314,7 +346,7 @@ if uploaded_file is not None:
 
             try:
 
-                # YOLO inference
+                # Run YOLO inference
                 results = yolo_model.predict(
                     source=image,
                     conf=CONFIDENCE_THRESHOLD,
@@ -323,7 +355,7 @@ if uploaded_file is not None:
 
                 result = results[0]
 
-                # Extract features
+                # Extract features for Random Forest
                 feature_df, counts = extract_features(
                     result
                 )
@@ -337,34 +369,32 @@ if uploaded_file is not None:
                 # Generate annotated image
                 annotated_image = result.plot()
 
-                # Convert BGR to RGB
+                # Ultralytics plot() returns a BGR image.
+                # Convert BGR to RGB for Streamlit display.
                 annotated_image = (
                     annotated_image[:, :, ::-1]
                 )
 
             except Exception as error:
-
                 st.error("Image analysis failed.")
                 st.exception(error)
                 st.stop()
 
         # ====================================================
-        # 10. DISPLAY YOLO RESULTS
+        # 11. DISPLAY YOLO RESULTS
         # ====================================================
 
         st.divider()
 
         st.header("🔍 Road Damage Detection Results")
 
-        col1, col2 = st.columns(
-            [1, 1]
-        )
+        col1, col2 = st.columns([1, 1])
 
         with col1:
 
             st.image(
                 annotated_image,
-                caption="YOLO annotated detection image",
+                caption="YOLO26s annotated detection image",
                 use_container_width=True,
             )
 
@@ -372,10 +402,12 @@ if uploaded_file is not None:
 
             st.subheader("Detected Damage Counts")
 
-            detection_table = pd.DataFrame({
-                "Damage Class": list(counts.keys()),
-                "Detections": list(counts.values()),
-            })
+            detection_table = pd.DataFrame(
+                {
+                    "Damage Class": list(counts.keys()),
+                    "Detections": list(counts.values()),
+                }
+            )
 
             st.dataframe(
                 detection_table,
@@ -389,25 +421,27 @@ if uploaded_file is not None:
             )
 
             st.caption(
-                f"Confidence threshold: "
+                "Confidence threshold: "
                 f"{CONFIDENCE_THRESHOLD}"
             )
 
         # ====================================================
-        # 11. RANDOM FOREST CLASSIFICATION
+        # 12. RANDOM FOREST CLASSIFICATION
         # ====================================================
 
         st.divider()
 
-        st.header(
-            "🚧 Maintenance Priority Assessment"
-        )
+        st.header("🚧 Maintenance Priority Assessment")
 
         prediction = "Insufficient detections"
 
         probability_dict = {}
 
         classification_success = False
+
+        # ----------------------------------------------------
+        # If no damage was detected
+        # ----------------------------------------------------
 
         if total_detections == 0:
 
@@ -418,16 +452,19 @@ if uploaded_file is not None:
                 "is recommended."
             )
 
+        # ----------------------------------------------------
+        # If damage was detected, run Random Forest
+        # ----------------------------------------------------
+
         else:
 
             try:
 
-                # Random Forest prediction
                 prediction = rf_model.predict(
                     feature_df
                 )[0]
 
-                # Class probabilities
+                # Get classifier probabilities if available
                 if hasattr(rf_model, "predict_proba"):
 
                     probabilities = (
@@ -439,34 +476,28 @@ if uploaded_file is not None:
                     probability_dict = {
                         str(class_name): round(
                             float(probability) * 100,
-                            2
+                            2,
                         )
                         for class_name, probability in zip(
                             rf_model.classes_,
-                            probabilities
+                            probabilities,
                         )
                     }
 
                 classification_success = True
 
-                st.subheader(
-                    "Predicted Visual Priority"
-                )
+                st.subheader("Predicted Visual Priority")
 
                 if prediction == "High":
-
                     st.error("🔴 HIGH PRIORITY")
 
                 elif prediction == "Medium":
-
                     st.warning("🟡 MEDIUM PRIORITY")
 
                 elif prediction == "Low":
-
                     st.success("🟢 LOW PRIORITY")
 
                 else:
-
                     st.info(str(prediction))
 
                 # Display probability estimates
@@ -476,14 +507,16 @@ if uploaded_file is not None:
                         "Classifier Probability Estimates"
                     )
 
-                    probability_table = pd.DataFrame({
-                        "Priority": list(
-                            probability_dict.keys()
-                        ),
-                        "Model Probability (%)": list(
-                            probability_dict.values()
-                        ),
-                    })
+                    probability_table = pd.DataFrame(
+                        {
+                            "Priority": list(
+                                probability_dict.keys()
+                            ),
+                            "Model Probability (%)": list(
+                                probability_dict.values()
+                            ),
+                        }
+                    )
 
                     st.dataframe(
                         probability_table,
@@ -502,8 +535,11 @@ if uploaded_file is not None:
                 st.exception(error)
 
         # ====================================================
-        # 12. SAVE PREDICTION IN SQLITE
+        # 13. SAVE PREDICTION IN SQLITE
         # ====================================================
+
+        # Save successful RF predictions or zero-detection
+        # results, matching the behavior of your original app.
 
         if (
             classification_success
@@ -521,7 +557,7 @@ if uploaded_file is not None:
                 )
 
                 st.success(
-                    "✅ Prediction saved successfully "
+                    "Prediction saved successfully "
                     "in the SQLite database."
                 )
 
@@ -534,7 +570,7 @@ if uploaded_file is not None:
                 st.exception(error)
 
         # ====================================================
-        # 13. DISPLAY EXTRACTED FEATURES
+        # 14. DISPLAY EXTRACTED FEATURES
         # ====================================================
 
         with st.expander(
@@ -555,7 +591,7 @@ if uploaded_file is not None:
 
 
 # ============================================================
-# 14. PREDICTION HISTORY
+# 15. PREDICTION HISTORY
 # ============================================================
 
 st.divider()
@@ -578,7 +614,7 @@ try:
     else:
 
         # ----------------------------------------------------
-        # SUMMARY METRICS
+        # Summary metrics
         # ----------------------------------------------------
 
         total_records = len(history)
@@ -605,33 +641,33 @@ try:
 
         col1.metric(
             "Recent Records",
-            total_records
+            total_records,
         )
 
         col2.metric(
             "High Priority",
-            int(high_count)
+            int(high_count),
         )
 
         col3.metric(
             "Medium Priority",
-            int(medium_count)
+            int(medium_count),
         )
 
         col4.metric(
             "Low Priority",
-            int(low_count)
+            int(low_count),
         )
 
         if other_count > 0:
 
             st.caption(
-                f"Other or unclassified records: "
+                "Other or unclassified records: "
                 f"{int(other_count)}"
             )
 
         # ----------------------------------------------------
-        # HISTORY TABLE
+        # History table
         # ----------------------------------------------------
 
         st.subheader("Recent Road Analyses")
@@ -643,7 +679,7 @@ try:
         )
 
         # ----------------------------------------------------
-        # SELECT AND VIEW RECORD
+        # Select and view an individual record
         # ----------------------------------------------------
 
         st.subheader(
@@ -655,9 +691,7 @@ try:
             history["id"].tolist(),
         )
 
-        if st.button(
-            "View Selected Prediction"
-        ):
+        if st.button("View Selected Prediction"):
 
             record = get_prediction_details(
                 selected_id
@@ -723,7 +757,7 @@ except Exception as error:
 
 
 # ============================================================
-# 15. FOOTER
+# 16. FOOTER
 # ============================================================
 
 st.divider()
