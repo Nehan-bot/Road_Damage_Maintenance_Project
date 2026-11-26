@@ -26,3 +26,20 @@ supervised maintenance-priority classification.
 - OpenCV
 - Ultralytics
 - Streamlit
+
+## Final YOLO26s Test Evaluation
+
+The selected YOLO26s model (`best.pt`) was evaluated on the held-out test split using an image size of 640.
+
+- Test images: 2,278
+- Annotated objects: 4,673
+- Precision: 58.5%
+- Recall: 46.3%
+- mAP@50: 47.4%
+- mAP@50–95: 21.4%
+
+The highest class-wise mAP@50 was achieved for transverse cracks (55.6%). Longitudinal cracks had the lowest recall (40.7%), indicating that this class remains a key area for improvement.
+
+The best checkpoint was selected during training using validation performance. The test split was used for final evaluation.
+
+Model checkpoint: `experiments/yolo_final/yolo26s_640_final/weights/best.pt`
