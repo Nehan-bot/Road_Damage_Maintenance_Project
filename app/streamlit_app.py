@@ -106,90 +106,94 @@ if "analysis_result" not in st.session_state:
     st.session_state.analysis_result = None
 
 
+NAV_PAGES = ["Home", "Dashboard", "Image Analysis", "Prediction History", "Model & Connection"]
+if "nav_choice" not in st.session_state:
+    st.session_state.nav_choice = st.session_state.page
+
+def _navigate_to(destination):
+    # Streamlit invokes callbacks before rendering widgets on the next rerun.
+    st.session_state.page = destination
+    st.session_state.nav_choice = destination
+
+def _sync_navigation():
+    st.session_state.page = st.session_state.nav_choice
+
+
 # ============================================================
 # THEME STYLING
 # ============================================================
 
 def apply_theme(theme):
-    # Streamlit's built-in theme is app-wide; this CSS palette keeps all
-    # custom surfaces and text readable in each selected mode.
-    if theme == "Dark":
-        css = """
-        <style>
-        :root { color-scheme: dark; }
-        .stApp { --page-bg:#0b1220; --surface:#111d2e; --surface-2:#17263a;
-          --text:#f1f5f9; --muted:#b8c7d9; --border:#2b3b50; --accent:#60a5fa;
-          --accent-strong:#2563eb; --sidebar-bg:#0d1b2d; }
-        </style>"""
-    elif theme == "Light":
-        css = """
-        <style>
-        :root { color-scheme: light; }
-        .stApp { --page-bg:#f4f7fb; --surface:#ffffff; --surface-2:#eaf0f7;
-          --text:#172b45; --muted:#526174; --border:#d8e1ec; --accent:#2563eb;
-          --accent-strong:#174ea6; --sidebar-bg:#10243a; }
-        </style>"""
+    light = """
+      --page-bg:#f3f6fb; --surface:#ffffff; --surface-2:#eaf0f7;
+      --text:#15263d; --muted:#52657c; --border:#d9e2ee;
+      --accent:#2563eb; --accent-strong:#174ea6;
+    """
+    dark = """
+      --page-bg:#0b1220; --surface:#111d2e; --surface-2:#1a2a40;
+      --text:#f3f7fc; --muted:#b8c7d9; --border:#2b3c52;
+      --accent:#60a5fa; --accent-strong:#2563eb;
+    """
+    if theme == "Light":
+        palette = f".stApp {{{light}}}"
+        scheme = "light"
+    elif theme == "Dark":
+        palette = f".stApp {{{dark}}}"
+        scheme = "dark"
     else:
-        css = """
-        <style>
-        @media (prefers-color-scheme: dark) {
-          .stApp { --page-bg:#0b1220; --surface:#111d2e; --surface-2:#17263a;
-            --text:#f1f5f9; --muted:#b8c7d9; --border:#2b3b50; --accent:#60a5fa;
-            --accent-strong:#2563eb; --sidebar-bg:#0d1b2d; }
-        }
-        @media (prefers-color-scheme: light) {
-          .stApp { --page-bg:#f4f7fb; --surface:#ffffff; --surface-2:#eaf0f7;
-            --text:#172b45; --muted:#526174; --border:#d8e1ec; --accent:#2563eb;
-            --accent-strong:#174ea6; --sidebar-bg:#10243a; }
-        }
-        </style>"""
-    global_css = """
+        palette = f"""
+        @media (prefers-color-scheme:light) {{ .stApp {{{light}}} }}
+        @media (prefers-color-scheme:dark) {{ .stApp {{{dark}}} }}
+        """
+        scheme = "light dark"
+
+    css = f"""
     <style>
-    .stApp { background:var(--page-bg); color:var(--text); }
-    [data-testid="stSidebar"] { background:var(--sidebar-bg); }
-    [data-testid="stSidebar"] * { color:#f1f5f9; }
-    [data-testid="stMetric"], .rg-card {
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:14px; padding:16px;
-    }
-    [data-testid="stMetric"] label, .rg-muted { color:var(--muted)!important; }
-    .block-container { padding-top:1.15rem; padding-bottom:2rem; max-width:1500px; }
-    h1,h2,h3,h4,p,li,label { color:var(--text); }
-    [data-testid="stVerticalBlockBorderWrapper"] {
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:20px; }
-    [data-testid="stVerticalBlockBorderWrapper"] > div { padding:1.15rem; }
-    .rg-kicker { display:inline-block; color:var(--accent); font-weight:700;
-      letter-spacing:.08em; font-size:.78rem; text-transform:uppercase; }
-    .rg-hero-title { font-size:clamp(2.3rem,4.5vw,4rem); line-height:1.05;
-      font-weight:800; color:var(--text); margin:.5rem 0; }
-    .rg-subtitle { font-size:1.15rem; color:var(--muted); }
-    .rg-section { background:var(--surface); border:1px solid var(--border);
-      border-radius:16px; padding:1.15rem; height:100%; }
-    .rg-stat { background:var(--surface-2); border-radius:12px; padding:1rem;
-      text-align:center; height:100%; }
-    div.stButton > button[kind="primary"] { background:var(--accent-strong);
-      border-color:var(--accent-strong); color:#fff; border-radius:10px; font-weight:600; }
-    div.stButton > button { border-radius:10px; }
-    [data-testid="stDataFrame"], [data-testid="stTable"] { border-radius:12px; }
-    [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
-    [data-testid="stTextArea"] textarea, [data-testid="stSelectbox"] div,
-    [data-testid="stMultiSelect"] div, [data-testid="stDateInput"] input {
-      background:var(--surface)!important; color:var(--text)!important;
-      border-color:var(--border)!important;
-    }
-    [data-testid="stFileUploader"], [data-testid="stExpander"],
-    [data-testid="stAlert"], [data-testid="stPopover"] {
-      background:var(--surface)!important; color:var(--text)!important;
-      border-color:var(--border)!important;
-    }
-    [data-testid="stRadio"] label, [data-testid="stCheckbox"] label {
-      color:var(--text)!important;
-    }
-    [data-testid="stHeader"] { background:transparent; }
+    :root {{ color-scheme:{scheme}; }}
+    {palette}
+    .stApp {{background:var(--page-bg)!important;color:var(--text)!important;}}
+    [data-testid="stSidebar"] {{background:#0d1b2d!important;border-right:1px solid #23364c;}}
+    [data-testid="stSidebar"] * {{color:#eef4fb;}}
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{color:#c4d1e0;}}
+    [data-testid="stSidebar"] hr {{border-color:#2b3d53;}}
+    .block-container {{max-width:1540px;padding-top:1.25rem;padding-bottom:2.3rem;}}
+    h1,h2,h3,h4,h5,p,li,label,[data-testid="stMarkdownContainer"] {{color:var(--text);}}
+    [data-testid="stCaptionContainer"],.rg-muted {{color:var(--muted)!important;}}
+    [data-testid="stMetric"] {{background:var(--surface)!important;border:1px solid var(--border)!important;
+      border-radius:16px!important;padding:16px 18px!important;box-shadow:0 2px 8px rgba(20,40,70,.04);}}
+    [data-testid="stMetricLabel"],[data-testid="stMetricValue"] {{color:var(--text)!important;}}
+    .rg-kicker {{color:var(--accent);font-weight:800;letter-spacing:.11em;font-size:.76rem;text-transform:uppercase;}}
+    .rg-hero-title {{font-size:clamp(2.5rem,4.6vw,4.4rem);line-height:1.02;font-weight:850;
+      letter-spacing:-.045em;color:var(--text);margin:.65rem 0 .5rem;}}
+    .rg-subtitle {{font-size:clamp(1.05rem,1.5vw,1.3rem);color:var(--muted);font-weight:550;line-height:1.45;}}
+    .rg-lead {{font-size:1.04rem;line-height:1.75;color:var(--muted);}}
+    .rg-section {{background:var(--surface);border:1px solid var(--border);border-radius:17px;
+      padding:1.15rem 1.25rem;height:100%;}}
+    .rg-section h3 {{font-size:1.12rem;margin:.35rem 0 .55rem;}}
+    .rg-section p {{color:var(--muted);line-height:1.65;margin-bottom:.15rem;}}
+    .rg-stat {{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;
+      padding:1rem;text-align:center;height:100%;}}
+    .rg-stat-number {{font-size:1.55rem;font-weight:800;color:var(--text);}}
+    .rg-stat-label {{font-size:.88rem;color:var(--muted);line-height:1.45;}}
+    .rg-theme-label {{text-align:right;color:var(--muted);font-size:.72rem;font-weight:800;letter-spacing:.12em;margin-bottom:.3rem;}}
+    div.stButton>button {{border-radius:11px!important;min-height:2.75rem;font-weight:650!important;
+      border:1px solid var(--border)!important;transition:transform .12s ease,box-shadow .12s ease;}}
+    div.stButton>button:hover {{transform:translateY(-1px);box-shadow:0 5px 16px rgba(30,65,110,.12);}}
+    div.stButton>button[kind="primary"] {{background:var(--accent-strong)!important;color:#fff!important;border-color:var(--accent-strong)!important;}}
+    [data-testid="stRadio"] label {{color:var(--text)!important;background:var(--surface)!important;
+      border:1px solid var(--border)!important;border-radius:999px!important;padding:.35rem .7rem!important;}}
+    [data-testid="stRadio"] label p {{font-size:.86rem;font-weight:650;}}
+    [data-testid="stFileUploader"],[data-testid="stExpander"],[data-testid="stAlert"] {{
+      background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:14px!important;}}
+    [data-testid="stDataFrame"],[data-testid="stTable"] {{border:1px solid var(--border);border-radius:12px;overflow:hidden;}}
+    [data-testid="stTextInput"] input,[data-testid="stSelectbox"] div,[data-testid="stNumberInput"] input,
+    [data-testid="stDateInput"] input {{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important;}}
+    [data-testid="stHeader"] {{background:transparent!important;}}
+    .rg-footer {{color:var(--muted);font-size:.82rem;text-align:center;}}
+    @media(max-width:900px) {{.block-container{{padding-left:1rem;padding-right:1rem;}}.rg-hero-title{{font-size:2.5rem;}}}}
     </style>
     """
-    st.markdown(css + global_css, unsafe_allow_html=True)
+    st.markdown(css, unsafe_allow_html=True)
 
 
 # ============================================================
@@ -217,12 +221,14 @@ def load_models():
     return yolo_model, rf_model
 
 
+models_available = YOLO_MODEL_PATH.exists() and RF_MODEL_PATH.exists()
 models_loaded = False
 model_error = None
 yolo_model = None
 rf_model = None
 
-if YOLO_MODEL_PATH.exists() and RF_MODEL_PATH.exists():
+# Keep the Home page quick: model files are loaded on first image analysis.
+if st.session_state.page == "Image Analysis" and models_available:
     try:
         yolo_model, rf_model = load_models()
         models_loaded = True
@@ -287,49 +293,63 @@ def extract_features(result):
 
 
 # ============================================================
-# SIDEBAR — CHATGPT STYLE NAVIGATION
-# ============================================================
-
+# SIDEBAR — compact branded navigation
 with st.sidebar:
-    logo_path = ROOT_DIR / "assets" / "roadsight_logo.png"
+    logo_path = ROOT_DIR / "app" / "assets" / "roadsight_logo.png"
     if logo_path.exists():
-        st.image(str(logo_path), width=92)
-    st.markdown("## RoadSight AI")
+        st.image(str(logo_path), width=86)
+    st.markdown(
+        "<div style='font-size:1.55rem;font-weight:850;letter-spacing:-.04em;"
+        "color:#f3f7fc;margin-top:-.4rem'>RoadSight AI</div>",
+        unsafe_allow_html=True,
+    )
     st.caption("Road Damage Intelligence")
     st.divider()
 
-    page = st.radio(
+    st.radio(
         "Workspace",
-        ["Home", "Dashboard", "Image Analysis", "Prediction History", "Model & Connection"],
-        key="page",
+        NAV_PAGES,
+        key="nav_choice",
+        on_change=_sync_navigation,
         label_visibility="collapsed",
     )
 
     st.divider()
-    st.markdown("### System Status")
-    if models_loaded:
-        st.success("YOLO26s · Ready")
-        st.success("Random Forest · Ready")
-    else:
-        st.error("Models · Not ready")
-    if database_connected:
-        st.success("SQLite · Connected")
-    else:
-        st.error("SQLite · Error")
-
+    st.markdown("#### System Status")
+    status_yolo = "Model files found" if models_available else "Model files missing"
+    status_rf = "Model files found" if models_available else "Model files missing"
+    status_db = "Connected" if database_connected else "Connection error"
+    for label, status in [
+        ("YOLO26s Detector", status_yolo),
+        ("Random Forest", status_rf),
+        ("SQLite Database", status_db),
+    ]:
+        st.markdown(
+            "<div style='background:#14263a;border:1px solid #2b4058;"
+            "border-radius:12px;padding:.65rem .8rem;margin:.35rem 0'>"
+            "<span style='color:#65d69a'>●</span> "
+            f"<span style='color:#edf4fb;font-size:.9rem'>{label}</span>"
+            f"<br><span style='color:#a9bad0;font-size:.78rem'>{status}</span></div>",
+            unsafe_allow_html=True,
+        )
     st.divider()
-    st.caption("M.Tech Research Prototype\n\nImage-based road damage analysis")
+    st.caption("M.Tech Research Prototype")
+    st.caption("Image-based road damage decision support")
 
 
 # ============================================================
-# COMMON HEADER
-# ============================================================
-
-header_left, header_right = st.columns([5, 2])
+# COMMON HEADER — appearance selector sits below Streamlit's toolbar
+header_left, header_right = st.columns([5.1, 2.0], vertical_alignment="center")
 with header_left:
-    st.markdown("### RoadSight AI")
-    st.caption("Road Damage Intelligence & Maintenance Prioritization")
+    st.markdown(
+        "<div style='font-size:1.55rem;font-weight:850;letter-spacing:-.04em;"
+        "margin:.15rem 0;color:var(--text)'>RoadSight AI</div>"
+        "<div style='font-size:.92rem;color:var(--muted);margin-top:-.25rem'>"
+        "Road Damage Intelligence &amp; Maintenance Prioritization</div>",
+        unsafe_allow_html=True,
+    )
 with header_right:
+    st.markdown("<div class='rg-theme-label'>APPEARANCE</div>", unsafe_allow_html=True)
     st.radio(
         "Appearance",
         ["System", "Light", "Dark"],
@@ -339,11 +359,13 @@ with header_right:
     )
 
 apply_theme(st.session_state.theme_choice)
+page = st.session_state.page
 
-st.caption(
-    "Research prototype: visual priority estimates are not verified "
-    "real-world maintenance urgency."
-)
+if page != "Home":
+    st.caption(
+        "Research prototype: visual priority estimates are not verified "
+        "real-world maintenance urgency."
+    )
 
 
 # ============================================================
@@ -364,7 +386,7 @@ if database_connected:
 # ============================================================
 
 if page == "Home":
-    hero_left, hero_right = st.columns([1.05, 1], gap="large")
+    hero_left, hero_right = st.columns([1.02, 1.15], gap="large")
     with hero_left:
         with st.container(border=True):
             st.markdown('<span class="rg-kicker">AI for safer roads</span>', unsafe_allow_html=True)
@@ -375,14 +397,21 @@ if page == "Home":
                 "from images and estimates maintenance priority to support safer, "
                 "more durable and cost-aware road infrastructure."
             )
-            if st.button("Get Started — Analyse Image  →", type="primary", use_container_width=True):
-                st.session_state.page = "Image Analysis"
-                st.rerun()
-            if st.button("Go to Dashboard", use_container_width=True):
-                st.session_state.page = "Dashboard"
-                st.rerun()
+            st.button(
+                "Get Started — Analyse Image  →",
+                type="primary",
+                use_container_width=True,
+                on_click=_navigate_to,
+                args=("Image Analysis",),
+            )
+            st.button(
+                "Go to Dashboard",
+                use_container_width=True,
+                on_click=_navigate_to,
+                args=("Dashboard",),
+            )
     with hero_right:
-        hero_image = ROOT_DIR / "assets" / "road_safety_hero.jpg"
+        hero_image = ROOT_DIR / "app" / "assets" / "road_safety_hero.jpg"
         if hero_image.exists():
             st.image(str(hero_image), use_container_width=True)
         else:
@@ -467,8 +496,8 @@ elif page == "Dashboard":
                     "SQLite Database",
                 ],
                 "Status": [
-                    "Ready" if models_loaded else "Unavailable",
-                    "Ready" if models_loaded else "Unavailable",
+                    "Files found" if models_available else "Unavailable",
+                    "Files found" if models_available else "Unavailable",
                     "Connected" if database_connected else "Error",
                 ],
             }
@@ -524,9 +553,8 @@ elif page == "Dashboard":
     st.button(
         "Go to Image Analysis",
         type="primary",
-        on_click=lambda: st.session_state.update(
-            page="Image Analysis"
-        ),
+        on_click=_navigate_to,
+        args=("Image Analysis",),
     )
 
 
@@ -542,12 +570,22 @@ elif page == "Image Analysis":
         "its visual maintenance priority."
     )
 
-    if not models_loaded:
+    if not models_available:
         st.error(
-            "The trained models are not available. "
-            "Check the Model & Connection page."
+            "The trained model files are missing. Check the model paths "
+            "on the Model & Connection page."
         )
         st.stop()
+
+    if not models_loaded:
+        with st.spinner("Loading trained models for your first analysis..."):
+            try:
+                yolo_model, rf_model = load_models()
+                models_loaded = True
+            except Exception as error:
+                st.error("Could not load the trained models.")
+                st.exception(error)
+                st.stop()
 
     uploaded_file = st.file_uploader(
         "Upload road image",
@@ -806,11 +844,14 @@ elif page == "Model & Connection":
 
     st.markdown("### Model Status")
 
-    if models_loaded:
-        st.success("YOLO26s model loaded")
-        st.success("Random Forest model loaded")
+    if models_available:
+        st.success("YOLO26s and Random Forest model files found.")
+        st.info(
+            "Weights load when you open Image Analysis to keep Home fast. "
+            "After loading, Streamlit caches the models for subsequent use."
+        )
     else:
-        st.error("One or more models could not be loaded.")
+        st.error("One or more model files are missing.")
 
     st.markdown("### Model Paths")
 
@@ -859,7 +900,8 @@ elif page == "Model & Connection":
 
 st.divider()
 
-st.caption(
-    "RoadSight AI | M.Tech Research Prototype | "
-    "Road Damage Intelligence & Maintenance Prioritization"
+st.markdown(
+    "<div class='rg-footer'>RoadSight AI · M.Tech Research Prototype · "
+    "Road Damage Intelligence &amp; Maintenance Prioritization</div>",
+    unsafe_allow_html=True,
 )

@@ -1,5 +1,5 @@
 # Road Damage Detection and Intelligent Maintenance
-# Prioritization System Using Computer Vision and NLP
+# Prioritization System Using Computer Vision 
 
 ## Project Overview
 
