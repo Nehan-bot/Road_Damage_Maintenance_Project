@@ -1,0 +1,18 @@
+{
+    "damage_classifier": {
+        "task": "damage_classifier",
+        "target_column": "damage_type",
+        "test_accuracy": 1.0,
+        "test_macro_f1": 1.0,
+        "test_macro_precision": 1.0,
+        "test_macro_recall": 1.0
+    },
+    "urgency_classifier": {
+        "task": "urgency_classifier",
+        "target_column": "urgency",
+        "test_accuracy": 1.0,
+        "test_macro_f1": 1.0,
+        "test_macro_precision": 1.0,
+        "test_macro_recall": 1.0
+    }
+}

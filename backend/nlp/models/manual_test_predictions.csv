@@ -1,0 +1,9 @@
+text,damage_type,damage_confidence,urgency,urgency_confidence
+Cars are moving into the opposite lane to avoid a damaged section of road.,other,0.9908074736595154,Medium,0.9432453513145447
+"A small crack is visible near the edge of the road, but vehicles are passing normally.",transverse crack,0.7347383499145508,Low,0.9987654685974121
+Motorcycles are losing balance when crossing the damaged road surface.,other,0.9841067790985107,High,0.6387246251106262
+The road has a network of interconnected cracks near the market.,alligator crack,0.9937414526939392,Medium,0.9939893484115601
+A part of the road has sunk and drivers are slowing down to pass it.,other,0.9930099248886108,Medium,0.9985722303390503
+The road surface is uneven near the entrance of the residential area.,other,0.9935581088066101,Low,0.7956785559654236
+There is a broken drainage cover on the road near the hospital.,other,0.9903143048286438,Medium,0.89096999168396
+A wide crack crosses the road and causes vehicles to brake suddenly.,transverse crack,0.9942732453346252,High,0.9905214309692383
