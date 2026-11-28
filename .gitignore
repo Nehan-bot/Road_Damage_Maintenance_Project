@@ -18,3 +18,7 @@ experiments/
 # Previous dependency snapshot
 
 app/streamlit_app_backup.py
+
+# MLflow local tracking data
+mlflow.db
+mlartifacts/
