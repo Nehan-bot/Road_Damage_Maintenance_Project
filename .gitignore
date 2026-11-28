@@ -22,3 +22,45 @@ app/streamlit_app_backup.py
 # MLflow local tracking data
 mlflow.db
 mlartifacts/
+
+backend/inspection_history.db
+
+backend/uploads/
+backend/inspection_history.db
+
+# NLP training checkpoints
+backend/nlp/models/*/training_checkpoints/
+
+# NLP final model weights (store separately or use Git LFS)
+backend/nlp/models/*/model.safetensors
+
+# Local complaint database
+backend/complaints.db
+
+# Trained NLP model weights and training checkpoints
+backend/nlp/models/*/model.safetensors
+backend/nlp/models/*/training_checkpoints/
+
+# Local backup copy
+app/streamlit_app_backup_initial.py
+
+# Local complaint database
+backend/complaints.db
+
+# Local inspection database and uploaded images
+backend/inspection_history.db
+backend/uploads/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Trained NLP weights and checkpoints
+backend/nlp/models/*/model.safetensors
+backend/nlp/models/*/pytorch_model.bin
+backend/nlp/models/*/training_checkpoints/
+backend/nlp/models/*/checkpoint-*/
+
+# Local backup
+app/streamlit_app_backup_initial.py
